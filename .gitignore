@@ -2,3 +2,13 @@
 Thumbs.db
 .idea
 .vscode
+
+# Hasil build frontend numpang di backend/public — jangan di-commit,
+# di-generate ulang tiap build/deploy.
+backend/public/index.html
+backend/public/assets/
+backend/public/models/
+backend/public/sw.js
+backend/public/favicon.svg
+backend/public/icons.svg
+backend/public/logo.png

@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/api',
+  // Same-origin sekarang (Laravel serve React build), jadi relatif aja.
+  // Dev tetap jalan karena vite.config.ts udah proxy /api -> :8000.
+  baseURL: '/api',
   withCredentials: true,
   headers: {
     'Accept': 'application/json',

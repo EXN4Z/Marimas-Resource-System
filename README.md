@@ -16,21 +16,21 @@ marimas-rsc/
 ## Status migrasi
 
 - [x] Phase 1 — Skeleton repo (folder ini)
-- [ ] Phase 2 — Konfigurasi ulang build frontend (outDir -> backend/public, proxy dev)
-- [ ] Phase 3 — Catch-all route SPA di Laravel
-- [ ] Phase 4 — Bersih-bersih scaffold & config CORS
+- [x] Phase 2 — Konfigurasi ulang build frontend (outDir -> backend/public, proxy dev)
+- [x] Phase 3 — Catch-all route SPA di Laravel
+- [x] Phase 4 — Bersih-bersih scaffold & config CORS
 - [ ] Phase 5 — Update pipeline deploy (nixpacks.toml)
-- [ ] Phase 6 — Test end-to-end lokal
-- [ ] Phase 7 — Cutover deploy & domain
+- [ ] Phase 6 — Test end-to-end lokal (sebagian udah, lihat commit phase 3)
+- [ ] Phase 7 — Cutover deploy & domain (dieksekusi manual di Railway)
 
-## Dev (sementara, sebelum Phase 2)
+## Dev sekarang
 
-Masih jalan sebagai 2 proses terpisah:
+Satu command dari `backend/`:
 
 ```bash
-# terminal 1
-cd backend && composer install && php artisan serve
-
-# terminal 2
-cd frontend && npm install && npm run dev
+composer run dev
 ```
+
+Ini otomatis jalanin `php artisan serve` + `queue:listen` + `pail` (log) +
+`npm --prefix ../frontend run dev` (Vite dev server dengan proxy `/api` ke
+Laravel) sekaligus.

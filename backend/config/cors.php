@@ -15,29 +15,27 @@ return [
     |
     */
 
+    /*
+    | Sekarang frontend & backend satu origin (Laravel yang serve React
+    | build), jadi CORS gak lagi krusial buat app utama jalan. Yang
+    | disisain di sini cuma buat: (1) dev lokal kalau ada yang jalanin
+    | frontend dev server TANPA lewat proxy vite, dan (2) masa transisi
+    | selama deploy lama (Vercel/2 service Railway) masih hidup
+    | berdampingan. Setelah cutover ke 1 deploy kelar & deploy lama
+    | dimatikan, FRONTEND_URL & origin lama ini boleh dibuang.
+    */
+
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
     'allowed_origins' => array_filter([
-        'https://marimas-one-front.vercel.app',
-        'https://marimas-one-front-production.up.railway.app',
-        'https://marimas-one-back-production.up.railway.app',
-        'https://marimas-one.my.id',
         'http://localhost:5173',
         'http://localhost:5174',
-        'http://marimas-one.test',
-        env('FRONTEND_URL'),
+        env('FRONTEND_URL'), // isi ini kalau masih ada deploy lama yang perlu akses API selama masa transisi
     ]),
-    
-    'allowed_origins_patterns' => [
-        '#^https://marimas-one-front-.*\.vercel\.app$#',
-        '#^https://marimas-one-front-.*\.up\.railway\.app$#',
-        '#^https://marimas-one-back-.*\.up\.railway\.app$#',
-        '#^http://localhost:5173$#',
-        '#^http://localhost:5174$#',
-        '#^http://marimas-one\.test$#',
-    ],
+
+    'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],
 

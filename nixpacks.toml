@@ -1,0 +1,21 @@
+# Root nixpacks.toml -- ini sekarang 1 build buat monorepo (frontend + backend).
+# Di Railway, root directory service diarahin ke root repo ini (bukan ke
+# backend/ lagi kayak sebelumnya).
+
+[phases.setup]
+nixPkgs = ["php83", "php83Extensions.bcmath", "php83Extensions.gd", "php83Extensions.zip", "nodejs_20"]
+
+[phases.install]
+cmds = [
+  "cd frontend && npm ci",
+  "cd backend && composer install --no-dev --optimize-autoloader"
+]
+
+[phases.build]
+# Hasil build otomatis nulis ke backend/public (lihat frontend/vite.config.ts)
+cmds = [
+  "cd frontend && npm run build"
+]
+
+[start]
+cmd = "cd backend && php artisan config:clear && php artisan route:clear && php artisan view:clear && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT"

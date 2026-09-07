@@ -19,7 +19,7 @@ marimas-rsc/
 - [x] Phase 2 — Konfigurasi ulang build frontend (outDir -> backend/public, proxy dev)
 - [x] Phase 3 — Catch-all route SPA di Laravel
 - [x] Phase 4 — Bersih-bersih scaffold & config CORS
-- [ ] Phase 5 — Update pipeline deploy (nixpacks.toml)
+- [x] Phase 5 — Update pipeline deploy (nixpacks.toml)
 - [ ] Phase 6 — Test end-to-end lokal (sebagian udah, lihat commit phase 3)
 - [ ] Phase 7 — Cutover deploy & domain (dieksekusi manual di Railway)
 

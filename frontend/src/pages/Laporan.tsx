@@ -1,0 +1,275 @@
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Boxes, Users, ClipboardList, Loader2, Download, FileSpreadsheet, Images, History, Tags, Building2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { getInventory, type Inventory } from '../api/masterData/inventory';
+import { karyawanApi, type Karyawan } from '../api/karyawan';
+import { getAllInventoryPemakai, type InventoryPemakai } from '../api/transaksi/inventoryPemakai';
+import InventoryExportModal from '../components/laporan/InventoryExportModal';
+import KaryawanExportModal from '../components/laporan/KaryawanExportModal';
+import InventoryPemakaiExportModal from '../components/laporan/InventoryPemakaiExportModal';
+import ScrollableTabBar from '../components/shared/ScrollableTabBar';
+import TabFotoInventory from '../components/transaksi/TabFotoInventory';
+import TabRiwayatInventory from '../components/transaksi/TabRiwayatInventory';
+import { getKategori, type Kategori } from '../api/masterData/kategori';
+import KategoriExportModal from '../components/laporan/KategoriExportModal';
+import { getDepartemen, type Departemen } from '../api/masterData/departemen';
+import DepartemenExportModal from '../components/laporan/DepartemenExportModal';
+
+const STAFF_ROLES = ['admin', 'hr', 'manajer', 'manager', 'cabang'];
+
+// dulu halaman ini cuma 2 kartu export (Inventory & Karyawan) -- sekarang jadi
+// tab-based karena Foto Inventory & Riwayat Inventory (pindahan dari Inventaris.tsx,
+// yang bakal dihapus) ikut digabung ke sini. Tab "export" (kartu-kartu di
+// bawah) sengaja gak dikasih query "?tab=" biar cocok sama child "Export
+// Data" di dropdown sidebar Laporan (AppLayout.tsx) yang path-nya polos
+// "/laporan" tanpa query.
+type TabKey = 'export' | 'foto_inventory' | 'riwayat_inventory';
+
+const TAB_KEYS: TabKey[] = ['export', 'foto_inventory', 'riwayat_inventory'];
+
+function isTabKey(value: string | null): value is TabKey {
+  return !!value && (TAB_KEYS as string[]).includes(value);
+}
+
+export default function Laporan() {
+  const { user } = useAuth();
+  const isStaff = !!user && STAFF_ROLES.includes(user.role);
+  const isAdmin = user?.role === 'admin';
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTabState] = useState<TabKey>(() => {
+    const fromUrl = searchParams.get('tab');
+    return isTabKey(fromUrl) ? fromUrl : 'export';
+  });
+
+  // ganti tab sekaligus sinkronin ke query param "?tab=" -- kecuali tab
+  // "export" yang sengaja gak pakai query sama sekali (lihat komentar di atas).
+  const setActiveTab = (tab: TabKey) => {
+    setActiveTabState(tab);
+    if (tab === 'export') {
+      setSearchParams({}, { replace: true });
+    } else {
+      setSearchParams({ tab }, { replace: true });
+    }
+  };
+
+  // kalau user klik link dropdown sidebar yang query-nya beda tapi pathname
+  // sama (gak remount komponen), effect ini yang nangkep perubahan query dan
+  // update activeTab-nya -- sama pola kayak MasterData.tsx / Inventaris.tsx.
+  useEffect(() => {
+    const fromUrl = searchParams.get('tab');
+    if (isTabKey(fromUrl) && fromUrl !== activeTab) {
+      setActiveTabState(fromUrl);
+    } else if (!fromUrl && activeTab !== 'export') {
+      setActiveTabState('export');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const [inventoryList, setInventoryList] = useState<Inventory[]>([]);
+  const [inventoryLoading, setInventoryLoading] = useState(true);
+  const [exportInventoryOpen, setExportInventoryOpen] = useState(false);
+
+  const [karyawanList, setKaryawanList] = useState<Karyawan[]>([]);
+  const [karyawanLoading, setKaryawanLoading] = useState(true);
+  const [exportKaryawanOpen, setExportKaryawanOpen] = useState(false);
+
+  // BARU: kartu export ketiga -- data pemakai inventory (serah-terima &
+  // pengembalian), admin only sama kayak endpoint-nya (lihat routes/api.php).
+  const [pemakaiList, setPemakaiList] = useState<InventoryPemakai[]>([]);
+  const [pemakaiLoading, setPemakaiLoading] = useState(true);
+  const [exportPemakaiOpen, setExportPemakaiOpen] = useState(false);
+  // tambahan state (taruh dekat state pemakaiList)
+  const [kategoriList, setKategoriList] = useState<Kategori[]>([]);
+  const [kategoriLoading, setKategoriLoading] = useState(true);
+  const [exportKategoriOpen, setExportKategoriOpen] = useState(false);
+  // departemen
+  const [departemenList, setDepartemenList] = useState<Departemen[]>([]);
+  const [departemenLoading, setDepartemenLoading] = useState(true);
+  const [exportDepartemenOpen, setExportDepartemenOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isStaff) return;
+    getInventory({ posisi: 'induk' })
+      .then(setInventoryList)
+      .catch(console.error)
+      .finally(() => setInventoryLoading(false));
+
+    getKategori()
+      .then(setKategoriList)
+      .catch(console.error)
+      .finally(() => setKategoriLoading(false));
+
+    getDepartemen()
+      .then(setDepartemenList)
+      .catch(console.error)
+      .finally(() => setDepartemenLoading(false));
+
+    karyawanApi
+      .getAll()
+      .then((res) => setKaryawanList(res.data))
+      .catch(console.error)
+      .finally(() => setKaryawanLoading(false));
+  }, [isStaff]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    getAllInventoryPemakai()
+      .then(setPemakaiList)
+      .catch(console.error)
+      .finally(() => setPemakaiLoading(false));
+  }, [isAdmin]);
+
+  if (!isStaff) {
+    return (
+        <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-200 text-center">
+          <p className="text-sm text-slate-500">Anda tidak punya akses ke halaman ini.</p>
+        </div>
+    );
+  }
+
+  const tabs: { key: TabKey; label: string; icon: typeof FileSpreadsheet; adminOnly?: boolean }[] = [
+    { key: 'export', label: 'Export Data', icon: FileSpreadsheet },
+    // pindahan dari Inventaris.tsx
+    { key: 'foto_inventory', label: 'Foto Inventory', icon: Images, adminOnly: true },
+    { key: 'riwayat_inventory', label: 'Riwayat Inventory', icon: History },
+  ];
+
+  return (
+    <>
+      <ScrollableTabBar
+        className="mb-6"
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        tabs={tabs
+          .filter((t) => !t.adminOnly || isAdmin)
+          .map((t) => ({ key: t.key, label: t.label, icon: t.icon }))}
+      />
+
+      {activeTab === 'export' ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 flex flex-col">
+            <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center mb-4">
+              <Boxes size={18} />
+            </div>
+            <h3 className="text-sm font-semibold text-slate-900 mb-1">Data Inventory</h3>
+            <p className="text-xs text-slate-500 leading-relaxed flex-1">
+              Export seluruh data inventory IT (kode, jenis, status, kelengkapan, dsb) sebagai Excel atau PDF — kolom bisa dipilih sendiri.
+            </p>
+
+            <div className="mt-4">
+              <button
+                onClick={() => setExportInventoryOpen(true)}
+                disabled={inventoryLoading}
+                className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-slate-800 transition disabled:opacity-40"
+              >
+                {inventoryLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                {inventoryLoading ? 'Memuat data...' : 'Export'}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 flex flex-col">
+            <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center mb-4">
+              <Users size={18} />
+            </div>
+            <h3 className="text-sm font-semibold text-slate-900 mb-1">Data Karyawan</h3>
+            <p className="text-xs text-slate-500 leading-relaxed flex-1">
+              Export data karyawan (NIK, nama, departemen, tanggal masuk, dsb) sebagai Excel atau PDF — kolom bisa dipilih sendiri.
+            </p>
+
+            <div className="mt-4">
+              <button
+                onClick={() => setExportKaryawanOpen(true)}
+                disabled={karyawanLoading}
+                className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-slate-800 transition disabled:opacity-40"
+              >
+                {karyawanLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                {karyawanLoading ? 'Memuat data...' : 'Export'}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 flex flex-col">
+            <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center mb-4">
+              <Tags size={18} />
+            </div>
+            <h3 className="text-sm font-semibold text-slate-900 mb-1">Data Kategori</h3>
+            <p className="text-xs text-slate-500 leading-relaxed flex-1">
+              Export seluruh data kategori barang inventory sebagai Excel atau PDF.
+            </p>
+
+            <div className="mt-4">
+              <button
+                onClick={() => setExportKategoriOpen(true)}
+                disabled={kategoriLoading}
+                className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-slate-800 transition disabled:opacity-40"
+              >
+                {kategoriLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                {kategoriLoading ? 'Memuat data...' : 'Export'}
+              </button>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 flex flex-col">
+            <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center mb-4">
+              <Building2 size={18} />
+            </div>
+            <h3 className="text-sm font-semibold text-slate-900 mb-1">Data Departemen</h3>
+            <p className="text-xs text-slate-500 leading-relaxed flex-1">
+              Export seluruh data departemen sebagai Excel atau PDF.
+            </p>
+
+            <div className="mt-4">
+              <button
+                onClick={() => setExportDepartemenOpen(true)}
+                disabled={departemenLoading}
+                className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-slate-800 transition disabled:opacity-40"
+              >
+                {departemenLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                {departemenLoading ? 'Memuat data...' : 'Export'}
+              </button>
+            </div>
+          </div>
+
+          {isAdmin && (
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 flex flex-col">
+              <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center mb-4">
+                <ClipboardList size={18} />
+              </div>
+              <h3 className="text-sm font-semibold text-slate-900 mb-1">Data Pemakai Inventory</h3>
+              <p className="text-xs text-slate-500 leading-relaxed flex-1">
+                Export riwayat serah-terima & pengembalian inventory (pemakai, status, struk, tanggal, dsb) sebagai Excel atau PDF — kolom bisa dipilih sendiri.
+              </p>
+
+              <div className="mt-4">
+                <button
+                  onClick={() => setExportPemakaiOpen(true)}
+                  disabled={pemakaiLoading}
+                  className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-slate-800 transition disabled:opacity-40"
+                >
+                  {pemakaiLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                  {pemakaiLoading ? 'Memuat data...' : 'Export'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'foto_inventory' ? (
+        <TabFotoInventory />
+      ) : (
+        <TabRiwayatInventory />
+      )}
+
+      <InventoryExportModal open={exportInventoryOpen} onClose={() => setExportInventoryOpen(false)} data={inventoryList} />
+      <KaryawanExportModal open={exportKaryawanOpen} onClose={() => setExportKaryawanOpen(false)} data={karyawanList} />
+      <KategoriExportModal open={exportKategoriOpen} onClose={() => setExportKategoriOpen(false)} data={kategoriList} />
+      <DepartemenExportModal open={exportDepartemenOpen} onClose={() => setExportDepartemenOpen(false)} data={departemenList} />
+      {isAdmin && (
+        <InventoryPemakaiExportModal open={exportPemakaiOpen} onClose={() => setExportPemakaiOpen(false)} data={pemakaiList} />
+        
+        
+      )}
+    </>
+  );
+}

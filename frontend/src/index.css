@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+/* SAFETY NET biar halaman gak pernah bisa digeser horizontal secara utuh
+   (kejadian di HP: elemen manapun yang dikit aja lebih lebar dari layar
+   -- tabel, tab bar yang lupa dikasih overflow-x-auto sendiri, dsb --
+   bakal bikin SELURUH halaman ikut digeser ke samping, bukan cuma elemen
+   itu doang). Komponen yang emang butuh geser horizontal (tab bar, tabel)
+   tetep jalan normal karena masing-masing udah punya overflow-x-auto
+   sendiri di dalam boxnya; ini cuma nutup pintu keluar di level halaman.
+*/
+html, body, #root {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Matiin outline default browser pas card/chart/search diklik,
+   tapi tetep nyala kalau navigasi pake keyboard (Tab) */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Hilangkan semua focus ring / box-shadow dari Tailwind focus:ring di frontend */
+:where(input, textarea, select, button, a, [tabindex]):focus,
+:where(input, textarea, select, button, a, [tabindex]):focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: none !important;
+  --tw-ring-offset-shadow: none !important;
+}
+
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Edge lama */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge Chromium */
+}
+
+/* Route modal overlay (dipakai RouteModal.tsx untuk create/edit yang tampil di atas
+   halaman sebelumnya tanpa nge-unmount halaman di belakangnya, mirip ScanQrModal) */
+@keyframes route-modal-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes route-modal-panel-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.route-modal-backdrop {
+  animation: route-modal-backdrop-in 0.15s ease-out;
+}
+
+.route-modal-panel {
+  animation: route-modal-panel-in 0.18s ease-out;
+}
+
+/* Keyframes generik dipakai lewat Tailwind arbitrary value (animate-[fadeIn_...],
+   animate-[slideUp_...], dst) di banyak modal (InventoryFormModal,
+   InventoryLepasDariIndukModal, InventoryPengembalianModal, InventorySerahTerimaModal,
+   InventoryLaporKerusakanModal, InventoryPenangananSelesaiModal, PenangananInventory).
+   Sebelumnya keyframes ini gak pernah didefinisiin di manapun, jadi semua
+   animate-[...] yang makai nama-nama ini diem-diem gak jalan (browser gak
+   nemu @keyframes yang cocok, tapi juga gak error). */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
